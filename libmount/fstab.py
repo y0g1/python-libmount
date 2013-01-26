@@ -107,7 +107,7 @@ class FilesystemTable(list):
             """ Returns UUID of self.source drive 
                 requires root permissions
             """
-            if not _libblkid:
+            if not _libblkid or not self.source:
                 return ''
             if self.source[0:5].lower() == 'uuid=':
                 return self.source[5:].lower()
