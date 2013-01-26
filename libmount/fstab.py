@@ -1,7 +1,6 @@
 import ctypes
 import functools
 import os
-import subprocess
 
 __all__ = ['FilesystemTable']
 
@@ -14,6 +13,18 @@ for libname in libnames:
     break
 else:
     raise ImportError("Could not find libmount shared object. Is libmount installed?")
+
+
+libnames = ('libblkid.so', 'libblkid.so.1')
+for libname in libnames:
+    try:
+        _libblkid = ctypes.cdll.LoadLibrary(libname)
+    except OSError:
+        continue
+    break
+else:
+    _libblkid = False
+
 
 class FilesystemTable(list):
     class Options(set):
@@ -94,18 +105,20 @@ class FilesystemTable(list):
 
         def get_uuid(self):
             """ Returns UUID of self.source drive 
-                depends on 'blkid' command present in system (part of util-linux package), 
-                additionally on some installations requires root permissions
+                requires root permissions
             """
-            uuid = ''
+            if not _libblkid:
+                return ''
             if self.source[0:5].lower() == 'uuid=':
                 return self.source[5:].lower()
-            try:
-                uuid = subprocess.check_output( ["blkid %s | grep -o 'UUID=\"[^\"]*\"' | grep -o '[^UUID=\"].*[^\"]'" % self.source], shell=True).strip()
-            except subprocess.CalledProcessError:
-                pass
-
-            return uuid.lower()
+            pr = _libblkid.blkid_new_probe_from_filename( self.source )
+            if pr == 0:
+                return ''
+            uuid = ctypes.c_char_p('')
+            _libblkid.blkid_do_probe(pr);
+            _libblkid.blkid_probe_lookup_value(pr, 'UUID', ctypes.byref(uuid), None);
+            _libblkid.blkid_free_probe(pr);
+            return uuid.value.lower()
 
         def __unicode__(self):
             return "%s on %s type %s (%s)" % (self.source,
