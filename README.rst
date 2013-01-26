@@ -46,6 +46,17 @@ To update the on-disk filesystem table, call ``save()``::
                 fs.options.add('user_xattr')
         fstab.save()
 
+UUIDs
+-----
+
+You can get UUID of drives in fstab (if those have uuid) by using get_uuid method, like this:
+
+    with FilesystemTable() as fstab:
+        for fs in fstab:
+            print "%s = %s" % (fs.source, fs.get_uuid())
+
+Be getting proper results from get_uuid() requires root access on some systems. If drive does
+not have UUID, or you don't have permissions to read it, get_uuid will return empty string.
 
 Limitations
 -----------

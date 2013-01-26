@@ -1,6 +1,7 @@
 import ctypes
 import functools
 import os
+import subprocess
 
 __all__ = ['FilesystemTable']
 
@@ -89,6 +90,22 @@ class FilesystemTable(list):
             _libmount.mnt_fs_set_options(self._fs, value)
             del self._options
         options = property(_get_options, _set_options)
+
+
+        def get_uuid(self):
+            """ Returns UUID of self.source drive 
+                depends on 'blkid' command present in system (part of util-linux package), 
+                additionally on some installations requires root permissions
+            """
+            uuid = ''
+            if self.source[0:5].lower() == 'uuid=':
+                return self.source[5:].lower()
+            try:
+                uuid = subprocess.check_output( ["blkid %s | grep -o 'UUID=\"[^\"]*\"' | grep -o '[^UUID=\"].*[^\"]'" % self.source], shell=True).strip()
+            except subprocess.CalledProcessError:
+                pass
+
+            return uuid.lower()
 
         def __unicode__(self):
             return "%s on %s type %s (%s)" % (self.source,
